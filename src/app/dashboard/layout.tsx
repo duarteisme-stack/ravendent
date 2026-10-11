@@ -1,0 +1,23 @@
+import DashboardNav from "@/components/DashboardNav";
+import { logoutAction } from "@/app/actions/auth";
+import { getSessionContext } from "@/lib/dashboard";
+
+export const metadata = { title: "Dashboard", robots: { index: false } };
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { sb, user } = await getSessionContext();
+  const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("read_at", null);
+
+  return (
+    <div className="dash-shell mx-auto grid max-w-6xl gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[15rem_1fr] lg:py-14">
+      <DashboardNav unread={count ?? 0}>
+        <form action={logoutAction}>
+          <button type="submit" className="w-full rounded-md border-l-2 border-transparent px-3 py-2 text-left text-[0.95rem] text-silver transition-colors hover:bg-white/5 hover:text-snow">
+            Log Out
+          </button>
+        </form>
+      </DashboardNav>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
