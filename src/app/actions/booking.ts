@@ -11,6 +11,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MESSAGES: Record<string, string> = {
   slot_unavailable: "That time was just taken by someone else. Please choose another time.",
   too_many_active: "You have reached the limit of upcoming appointments. Cancel or complete one before booking another.",
+  one_per_day: "Only one session a day is allowed. Please choose another day.",
   rate_limited: "Too many changes in a short time. Please wait a while and try again.",
   service_unavailable: "That service is no longer available. Please choose another.",
   deadline_passed: "This appointment is inside the clinic's change deadline. Please contact the clinic to change it.",
