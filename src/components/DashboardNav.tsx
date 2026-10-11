@@ -16,8 +16,8 @@ const ITEMS = [
 export default function DashboardNav({ unread, children }: { unread: number; children: React.ReactNode }) {
   const path = usePathname();
   return (
-    <nav aria-label="Dashboard" className="lg:sticky lg:top-24">
-      <ul className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+    <nav aria-label="Dashboard" className="min-w-0 lg:sticky lg:top-24">
+      <ul className="flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:overflow-visible lg:pb-0">
         {ITEMS.map((i) => {
           const active = i.href === "/dashboard" ? path === i.href : path.startsWith(i.href);
           return (
