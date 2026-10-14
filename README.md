@@ -1,4 +1,4 @@
-# RavenDent (Stage 4: booking, QR tickets, reschedule and cancel)
+# RavenDent (Stage 5: admin dashboard, QR scanner, simpler patient dashboard)
 
 Next.js 15 (App Router) + TypeScript + Tailwind, Supabase Postgres, deployed on Vercel. Emails go through Brevo (Stage 6).
 
@@ -15,14 +15,17 @@ Next.js 15 (App Router) + TypeScript + Tailwind, Supabase Postgres, deployed on 
 | Booking wizard (service, dentist, date, time, review, confirm) with race-safe saving | Done |
 | Appointment ticket with QR code (view, download PNG, print) | Done |
 | Reschedule (can change service; duration recalculated) and cancel with confirmation and deadlines | Done |
-| Staff QR verification page (`/staff/verify`, manual reference fallback) | Done; camera scanner and admin tools in Stage 5 |
+| Admin dashboard (overview charts, appointments, doctors and times, services, hours, holidays, patients, staff, reports, audit log) | Done |
+| Camera QR scanner for staff (`/admin/scan`) with manual reference fallback | Done |
+| Patient dashboard redesigned for phones (bottom tab bar, single next-visit card) | Done |
+| Falling black feathers background | Done (hidden for reduced-motion users) |
 | Booking limits and rate limiting (database level) | Done |
-| Admin dashboard, camera QR scanner, service and schedule management | Stage 5 |
+
 | Brevo emails, reminders, tests | Stage 6 |
 
 ## Setup
 
-1. Supabase: create a project, open SQL Editor, run `supabase/migrations/001_init.sql`, then `002_booking.sql`. (Already ran the old `schema.sql`? Run only `002_booking.sql`.)
+1. Supabase: create a project, open SQL Editor, run `supabase/migrations/001_init.sql`, then `002_booking.sql`, then `003_admin.sql`. (Already ran earlier ones? Run only the files you have not run yet, in order.)
 2. Copy `.env.example` to `.env.local` and fill in the Project URL, anon key (Project Settings > API), and site URL.
 3. `npm install` then `npm run dev` and open http://localhost:3000.
 4. Supabase > Authentication:
@@ -48,6 +51,7 @@ Edit clinic address, phone, email, hours, services, and dentists in the Supabase
 | Authorization | `/dashboard` and `/book` need a session; data access is enforced by RLS in the database, not just the UI |
 | Rate limiting | Auth: Supabase Auth limits (Authentication > Rate Limits). Booking: at most 20 booking, reschedule, or cancel actions per patient per hour, and at most `max_active_appointments` (default 5) upcoming appointments, enforced inside the database functions |
 | Medical data | Visible to the patient, dentists, and admins only; never shown to receptionists |
+| Admin access | Every admin page and action re-checks the role on the server; the database also refuses writes from the wrong role |
 
 ## Tests
 
@@ -59,10 +63,32 @@ Edit clinic address, phone, email, hours, services, and dentists in the Supabase
 |---|---|
 | Double booking is impossible | Database exclusion constraint on dentist and time range, plus a row lock on reschedule |
 | Reschedule is one atomic update | Old slot is released and the new one reserved in the same statement; QR token rotates |
-| QR contains | `/staff/verify?code=<random token>` only. No names, medical data, or reference |
+| QR contains | Plain text: reference, patient name, service, date, time, dentist, and a random verification code. Any phone camera shows it; no link opens. Never medical data, phone, or email |
 | Approval | Services flagged `requires_approval` (or `clinic_settings.require_approval`) start as pending |
 | Change deadlines | `cancel_deadline_hours` and `reschedule_deadline_hours` in `clinic_settings` (default 24). Staff are exempt |
 | Emails | In-app notifications are created now; Brevo emails for them arrive in Stage 6 |
+
+## Admin dashboard
+
+| Page | Who | What you can do |
+|---|---|---|
+| Overview | All staff | Today's count, pending approvals, trend, weekday, service and new-vs-returning charts (dentists see only their own numbers) |
+| Appointments | All staff | Filter and search; approve or decline requests, complete, mark missed, reschedule, cancel (dentists: complete or missed on their own only) |
+| Scan QR | All staff | Camera scan or type the reference; Valid or Not valid; mark visit completed |
+| Doctors and times | Admin | Add, edit, delete doctors; set weekly working windows per doctor; link a doctor's login |
+| Services | Admin | Add, edit, delete services; duration, price range, preparation, approval rule, shown or hidden |
+| Hours and settings | Admin | Opening hours and lunch breaks, clinic details, notice, deadlines, limits |
+| Holidays and leave | Admin, receptionist | Close the clinic or one doctor for days or part of a day; warns about appointments inside the block |
+| Patients | All staff | Contact details and history; medical information only for admin and dentists |
+| Staff and roles | Admin | Give or remove access, change roles, deactivate accounts |
+| Reports, Audit log | Reports: all staff; Audit: admin | Counts by status, service, doctor for any range; who changed what |
+
+To become admin: register on the website, then run once in the SQL Editor:
+`update profiles set role = 'admin' where email = 'YOUR-EMAIL';`
+Staff sign in at the normal login page and land on the admin dashboard.
+
+The scanner needs HTTPS for the camera (Vercel provides it) and the browser's camera permission.
+Deleting a service or doctor that has appointments is refused; hide it instead (untick "shown on the website").
 
 ## Test accounts
 
@@ -103,6 +129,16 @@ Create users in Supabase > Authentication > Users (tick Auto Confirm), then run 
 | 29 | Scan the old QR after a reschedule | Not valid, with a message to get the current ticket |
 | 30 | Open `/staff/verify` as a customer | "Staff only", no data |
 | 31 | Print the ticket page | Only the ticket prints, black on white |
+| 32 | Scan a ticket QR with the phone camera | Shows appointment details as text; no link or browser opens |
+| 33 | Log in as admin | Lands on `/admin` with charts matching your data |
+| 34 | Services: add one, edit its duration, hide one | Website and booking calendar change within a minute or on next refresh |
+| 35 | Doctors: add a doctor, add Mon to Fri 9 AM to 5 PM | Doctor appears in booking; slots follow those hours |
+| 36 | Holidays: close tomorrow for the whole clinic | Tomorrow shows Closed on the public calendar; a warning lists affected bookings |
+| 37 | Appointments: approve a pending request | Patient gets a notification and the QR appears on their ticket |
+| 38 | Scan from `/admin/scan` | Valid for a current ticket; Not valid for one replaced by a reschedule |
+| 39 | Log in as a receptionist, open a patient | Contact details shown, medical information hidden |
+| 40 | Open `/admin` as a customer | Redirected to the patient dashboard |
+| 41 | Phone width: homepage, calendar, booking, dashboard, admin | No sideways scrolling; bottom tab bar on the patient dashboard; admin menu opens as a drawer |
 
 ## Troubleshooting
 

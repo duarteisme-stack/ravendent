@@ -4,7 +4,7 @@ import type { ClinicSettings } from "@/lib/clinic";
 
 export default function Footer({ settings }: { settings: ClinicSettings }) {
   return (
-    <footer className="border-t border-silver/15 bg-charcoal">
+    <footer className="border-t border-silver/15 bg-charcoal/80">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-2.5">

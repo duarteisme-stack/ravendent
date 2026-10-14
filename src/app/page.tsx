@@ -9,11 +9,27 @@ import { durationLabel, pesoRange } from "@/lib/format";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const { settings, hours, services, dentists } = await getClinicData();
+  const { settings, hours, services, dentists, loadError } = await getClinicData();
 
   return (
     <>
       <Hero clinicName={settings.clinic_name} />
+
+      {/* How it works */}
+      <section aria-label="How booking works" className="border-b border-silver/15 bg-charcoal/60">
+        <ol className="mx-auto grid max-w-6xl gap-px px-5 sm:px-8 md:grid-cols-3">
+          {[
+            ["Choose your treatment", "Every service shows its estimated time and price before you commit."],
+            ["Pick a time that fits", "See live openings with no account. Sign in only when you are ready to book."],
+            ["Show your QR at reception", "Your ticket lists your appointment details, ready on your phone or on paper."],
+          ].map(([h, p]) => (
+            <li key={h} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0 md:[&:not(:first-child)]:border-l md:border-silver/15">
+              <h2 className="text-2xl">{h}</h2>
+              <p className="mt-1.5 text-sm text-muted">{p}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       {/* About + hours */}
       <section id="about" className="section grid gap-14 lg:grid-cols-[1.2fr_1fr]">
@@ -52,7 +68,7 @@ export default async function HomePage() {
       </section>
 
       {/* Services: a ruled list, not a card grid */}
-      <section id="services" className="border-y border-silver/15 bg-charcoal">
+      <section id="services" className="border-y border-silver/15 bg-charcoal/70">
         <div className="section">
           <h2 className="text-4xl sm:text-5xl">Dental services</h2>
           <p className="mt-4 max-w-xl text-muted">
@@ -60,7 +76,9 @@ export default async function HomePage() {
           </p>
 
           {services.length === 0 ? (
-            <p className="mt-10 text-muted">Services will be listed here soon.</p>
+            <p className="mt-10 text-muted">
+              {loadError ? "We could not load our services just now. Please refresh in a moment." : "Services will be listed here soon."}
+            </p>
           ) : (
             <ul className="mt-10 divide-y divide-silver/15 border-y border-silver/15">
               {services.map((s) => {
@@ -104,7 +122,7 @@ export default async function HomePage() {
 
       {/* Dentists */}
       {dentists.length > 0 && (
-        <section id="dentists" className="border-t border-silver/15 bg-charcoal">
+        <section id="dentists" className="border-t border-silver/15 bg-charcoal/70">
           <div className="section">
             <h2 className="text-4xl sm:text-5xl">Our dentists</h2>
             <ul className="mt-10 grid gap-8 md:grid-cols-3">
@@ -137,7 +155,7 @@ export default async function HomePage() {
       </section>
 
       {/* Contact */}
-      <section id="contact" className="border-t border-silver/15 bg-charcoal">
+      <section id="contact" className="border-t border-silver/15 bg-charcoal/70">
         <div className="section grid gap-10 md:grid-cols-[1fr_1.2fr]">
           <div>
             <h2 className="text-4xl sm:text-5xl">Contact us</h2>

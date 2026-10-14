@@ -65,3 +65,49 @@ export function fmtDateTz(iso: string, timeZone: string): string {
 export function ymdInTz(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 }
+
+/** Offset (ms) of a time zone from UTC at a given instant. */
+function tzOffsetMs(ms: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+  }).formatToParts(new Date(ms));
+  const g = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second")) - Math.floor(ms / 1000) * 1000;
+}
+
+/** Local wall-clock date + time in a time zone -> UTC ISO string. */
+export function localToUtcISO(ymd: string, hhmm: string, timeZone: string): string {
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const [h, mi] = hhmm.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  let ms = guess - tzOffsetMs(guess, timeZone);
+  ms = guess - tzOffsetMs(ms, timeZone); // second pass handles DST edges
+  return new Date(ms).toISOString();
+}
+
+/** First instant of a local day. */
+export function localDayStartISO(ymd: string, timeZone: string): string {
+  return localToUtcISO(ymd, "00:00", timeZone);
+}
+
+/** First instant of the day AFTER a local day (exclusive end). */
+export function localDayEndISO(ymd: string, timeZone: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return localToUtcISO(next, "00:00", timeZone);
+}
+
+export function addDays(ymd: string, n: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+export function datePartsTz(iso: string, timeZone: string): { day: string; month: string; weekday: string } {
+  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-US", { timeZone, ...o }).format(new Date(iso));
+  return { day: f({ day: "numeric" }), month: f({ month: "short" }), weekday: f({ weekday: "short" }) };
+}
+
+export function greetingTz(timeZone: string): string {
+  const h = Number(new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hourCycle: "h23" }).format(new Date()));
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}

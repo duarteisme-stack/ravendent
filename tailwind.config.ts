@@ -12,6 +12,7 @@ const config: Config = {
         silver: "#C4C7D0",
         snow: "#F5F5F7",
         muted: "#9B9BA8",
+        night: { DEFAULT: "#0c0d1a", panel: "#14162b", raised: "#1a1d38", line: "#262a4d" },
         emerald: { DEFAULT: "#2F8F6B", light: "#4FB58E" },
       },
       fontFamily: {

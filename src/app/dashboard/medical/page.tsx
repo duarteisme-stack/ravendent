@@ -1,4 +1,5 @@
 import MedicalForm from "@/components/MedicalForm";
+import MeTabs from "@/components/MeTabs";
 import { getSessionContext } from "@/lib/dashboard";
 import { safeNext } from "@/lib/validation";
 
@@ -18,9 +19,10 @@ export default async function MedicalPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="max-w-2xl space-y-6">
-      <header>
-        <h1 className="text-5xl">Medical information</h1>
-        <p className="mt-2 text-muted">Your dentist uses this to choose safe materials, anesthesia, and medication. Keep it current.</p>
+      <header className="space-y-5">
+        <h1 className="text-5xl sm:text-6xl">Medical information</h1>
+        <MeTabs current="/dashboard/medical" />
+        <p className="text-muted">Your dentist uses this to choose safe materials and medication.</p>
       </header>
       <MedicalForm defaults={defaults} hasConsent={Boolean(data?.health_data_consent_at)} next={sp.next ? safeNext(sp.next) : undefined} />
     </div>

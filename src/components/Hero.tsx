@@ -17,10 +17,15 @@ export default function Hero({ clinicName }: { clinicName: string }) {
             Check open times without an account. Create one when you are ready to book, reschedule, or keep your
             appointment ticket on your phone.
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/book" className="btn-primary">Book an Appointment</Link>
-            <Link href="/#availability" className="btn-ghost">View Available Dates</Link>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <Link href="/book" className="btn-primary w-full sm:w-auto">Book an Appointment</Link>
+            <Link href="/#availability" className="btn-ghost w-full sm:w-auto">View Available Dates</Link>
           </div>
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
+            <li>No account needed to view times</li>
+            <li>Live availability</li>
+            <li>Your health data stays private</li>
+          </ul>
         </div>
       </div>
     </section>

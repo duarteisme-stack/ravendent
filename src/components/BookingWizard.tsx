@@ -19,11 +19,12 @@ type Props = {
   patientName: string;
   initial: { serviceId: string; dentistId: string; start?: string };
   current?: { id: string; startsAt: string; endsAt: string; serviceName: string; dentistName: string | null };
+  returnTo?: string;
 };
 
 const STEPS = ["Service", "Date and time", "Review"];
 
-export default function BookingWizard({ mode, services, dentists, timezone, horizonDays, requireApproval, patientName, initial, current }: Props) {
+export default function BookingWizard({ mode, services, dentists, timezone, horizonDays, requireApproval, patientName, initial, current, returnTo }: Props) {
   const [step, setStep] = useState<1 | 2 | 3>(initial.start ? 2 : 1);
   const [serviceId, setServiceId] = useState(initial.serviceId || services[0]?.id || "");
   const [dentistId, setDentistId] = useState(initial.dentistId);
@@ -206,6 +207,7 @@ export default function BookingWizard({ mode, services, dentists, timezone, hori
             <input type="hidden" name="dentist_id" value={dentistId} />
             <input type="hidden" name="start" value={chosen.start} />
             {current && <input type="hidden" name="appointment_id" value={current.id} />}
+            {returnTo && <input type="hidden" name="return" value={returnTo} />}
             {mode === "book" && (
               <div>
                 <label htmlFor="notes" className="mb-1.5 block text-sm text-silver">Note for the clinic <span className="text-muted">(optional)</span></label>

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import AppointmentList from "@/components/AppointmentList";
+import { DateBlock, StatusBadge } from "@/components/AppointmentList";
 import { getClinicData } from "@/lib/clinic";
 import { APPT_SELECT, getSessionContext, type AppointmentRow } from "@/lib/dashboard";
+import { fmtSlot, greetingTz } from "@/lib/format";
 
-export default async function DashboardOverview() {
+export default async function DashboardHome() {
   const { sb, user, profile } = await getSessionContext();
   const { settings } = await getClinicData();
 
@@ -16,54 +17,61 @@ export default async function DashboardOverview() {
 
   const hasPatient = Boolean(patient.data);
   const hasMedical = Boolean(medical.data);
-  const ready = hasPatient && hasMedical;
-  const appt = (next.data ?? []) as unknown as AppointmentRow[];
+  const done = Number(hasPatient) + Number(hasMedical);
+  const ready = done === 2;
+  const appt = ((next.data ?? []) as unknown as AppointmentRow[])[0];
   const firstName = (profile?.full_name ?? "").split(" ")[0];
+  const hoursUntil = appt ? (new Date(appt.starts_at).getTime() - Date.now()) / 3_600_000 : 0;
+  const canReschedule = appt && hoursUntil >= settings.reschedule_deadline_hours;
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       <header>
-        <h1 className="text-5xl">{firstName ? `Welcome, ${firstName}` : "Welcome"}</h1>
-        <p className="mt-2 text-muted">Your appointments and patient information in one place.</p>
+        <p className="text-muted">{greetingTz(settings.timezone)}</p>
+        <h1 className="text-5xl sm:text-6xl">{firstName || "Welcome"}</h1>
       </header>
 
       {!ready && (
-        <section aria-labelledby="setup" className="panel p-6 sm:p-8">
-          <h2 id="setup" className="text-3xl">Finish your patient profile</h2>
-          <p className="mt-2 max-w-prose text-silver">You need both sections below before you can book your first appointment.</p>
-          <ul className="mt-5 space-y-3">
-            <li className="flex items-center justify-between gap-4">
-              <span>{hasPatient ? "Patient profile complete" : "Patient profile needed"}</span>
-              {hasPatient ? <span className="text-sm text-emerald-light">Done</span> : <Link href="/dashboard/profile" className="btn-primary !py-2 !px-4 !text-sm">Complete profile</Link>}
-            </li>
-            <li className="flex items-center justify-between gap-4">
-              <span>{hasMedical ? "Medical information complete" : "Medical information needed"}</span>
-              {hasMedical ? <span className="text-sm text-emerald-light">Done</span> : <Link href="/dashboard/medical" className="btn-primary !py-2 !px-4 !text-sm">Add medical information</Link>}
-            </li>
-          </ul>
+        <section aria-labelledby="setup" className="panel flex flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <h2 id="setup" className="text-2xl">Finish your profile to book</h2>
+            <p className="mt-0.5 text-sm text-muted">{done} of 2 steps done: patient details and medical information.</p>
+            <div className="mt-3 h-1.5 w-48 max-w-full overflow-hidden rounded-full bg-ink" role="progressbar" aria-valuemin={0} aria-valuemax={2} aria-valuenow={done}>
+              <div className="h-full rounded-full bg-crimson-light" style={{ width: `${(done / 2) * 100}%` }} />
+            </div>
+          </div>
+          <Link href={hasPatient ? "/dashboard/medical" : "/dashboard/profile"} className="btn-primary">Continue</Link>
         </section>
       )}
 
       <section aria-labelledby="next">
-        <h2 id="next" className="text-3xl">Next appointment</h2>
-        <div className="mt-4">
-          {appt.length > 0 ? (
-            <AppointmentList items={appt} timezone={settings.timezone} />
-          ) : (
-            <div className="panel p-6">
-              <p className="font-medium">You have no upcoming appointments.</p>
-              <p className="mt-1 text-sm text-muted">Pick a time on the public calendar, or start from the booking page.</p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                {ready ? (
-                  <Link href="/book" className="btn-primary">Book an Appointment</Link>
-                ) : (
-                  <Link href={hasPatient ? "/dashboard/medical" : "/dashboard/profile"} className="btn-primary">Complete your profile to book</Link>
-                )}
-                <Link href="/#availability" className="btn-ghost">View Available Dates</Link>
+        <h2 id="next" className="sr-only">Next appointment</h2>
+        {appt ? (
+          <div className="relative overflow-hidden rounded-2xl border border-silver/20 bg-gradient-to-br from-slate via-slate to-[#2a1219] p-6 shadow-glow sm:p-8">
+            <div className="flex flex-wrap items-start gap-6">
+              <DateBlock iso={appt.starts_at} timezone={settings.timezone} large />
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex items-center gap-3"><span className="text-sm text-muted">Your next visit</span><StatusBadge status={appt.status} /></div>
+                <h3 className="text-4xl leading-tight sm:text-5xl">{appt.dental_services?.name ?? "Appointment"}</h3>
+                <p className="mt-2 text-lg text-silver">{fmtSlot(appt.starts_at, settings.timezone)} to {fmtSlot(appt.ends_at, settings.timezone)}</p>
+                {appt.dentists?.display_name && <p className="text-muted">{appt.dentists.display_name}</p>}
               </div>
             </div>
-          )}
-        </div>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href={`/dashboard/appointments/${appt.id}`} className="btn-primary">View ticket</Link>
+              {canReschedule && <Link href={`/dashboard/appointments/${appt.id}/reschedule`} className="btn-ghost">Reschedule</Link>}
+            </div>
+          </div>
+        ) : (
+          <div className="panel px-6 py-12 text-center sm:py-16">
+            <h3 className="text-4xl">No visits scheduled</h3>
+            <p className="mx-auto mt-2 max-w-sm text-muted">Pick a time that suits you. It takes about a minute.</p>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link href={ready ? "/book" : hasPatient ? "/dashboard/medical" : "/dashboard/profile"} className="btn-primary">{ready ? "Book a visit" : "Complete profile first"}</Link>
+              <Link href="/#availability" className="btn-ghost">See open times</Link>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

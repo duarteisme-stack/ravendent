@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Paths that require a signed-in user. Role-based admin routes are added in Stage 5. */
-const PROTECTED = ["/dashboard", "/book", "/staff"];
+const PROTECTED = ["/dashboard", "/book", "/admin", "/staff"];
 const AUTH_PAGES = ["/login", "/register", "/forgot-password"];
 
 export async function middleware(request: NextRequest) {

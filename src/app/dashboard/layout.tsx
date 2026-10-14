@@ -9,16 +9,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("read_at", null);
 
   return (
-    <div className="dash-shell mx-auto grid max-w-6xl grid-cols-1 gap-4 px-5 py-6 sm:px-8 lg:grid-cols-[15rem_1fr] lg:gap-8 lg:py-14">
-      <div className="min-w-0 overflow-x-auto lg:overflow-visible">
-        <DashboardNav unread={count ?? 0}>
-          <form action={logoutAction}>
-            <button type="submit" className="w-full whitespace-nowrap rounded-md border-l-2 border-transparent px-3 py-2 text-left text-[0.95rem] text-silver transition-colors hover:bg-white/5 hover:text-snow">
-              Log Out
-            </button>
-          </form>
-        </DashboardNav>
-      </div>
+    <div className="dash-shell mx-auto grid max-w-5xl gap-10 px-5 pb-32 pt-8 sm:px-8 lg:grid-cols-[13rem_1fr] lg:pb-16 lg:pt-12">
+      <DashboardNav unread={count ?? 0}>
+        <form action={logoutAction}>
+          <button type="submit" className="w-full rounded-lg px-3 py-2.5 text-left text-silver transition-colors hover:bg-white/5 hover:text-snow">Log out</button>
+        </form>
+      </DashboardNav>
       <div className="min-w-0">{children}</div>
     </div>
   );

@@ -7,7 +7,7 @@ import Ticket from "@/components/Ticket";
 import { getClinicData } from "@/lib/clinic";
 import { getSessionContext } from "@/lib/dashboard";
 import { fmtDateTz, fmtSlot } from "@/lib/format";
-import { siteUrl } from "@/lib/supabase-server";
+import { buildTicketText } from "@/lib/qr";
 
 export const metadata = { title: "Appointment" };
 
@@ -37,16 +37,23 @@ export default async function AppointmentPage({
     sb.from("appointment_tokens").select("token").eq("appointment_id", id).eq("is_active", true).maybeSingle(),
   ]);
 
-  // The QR carries only a random token inside a verification URL: no personal or medical data.
+  // The QR shows the appointment details as plain text (no link). The last line is a random code staff
+  // scanners check against the database, so old tickets stop validating after a change or cancellation.
   const token = appt.status === "confirmed" ? tokenRes.data?.token : null;
+  const dateLabel = fmtDateTz(appt.starts_at, settings.timezone);
+  const startLabel = fmtSlot(appt.starts_at, settings.timezone);
+  const endLabel = fmtSlot(appt.ends_at, settings.timezone);
   let qrSvg: string | null = null;
   let qrPng: string | null = null;
   if (token) {
-    const url = `${await siteUrl()}/staff/verify?code=${token}`;
+    const text = buildTicketText({
+      reference: appt.reference, patient: patient.data?.legal_name ?? "", service: appt.dental_services?.name ?? "Appointment",
+      date: dateLabel, start: startLabel, end: endLabel, dentist: appt.dentists?.display_name ?? null, code: token,
+    });
     const colors = { dark: "#0B0B0F", light: "#FFFFFF" };
     [qrSvg, qrPng] = await Promise.all([
-      QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: colors }),
-      QRCode.toDataURL(url, { width: 600, margin: 2, errorCorrectionLevel: "M", color: colors }),
+      QRCode.toString(text, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: colors }),
+      QRCode.toDataURL(text, { width: 800, margin: 2, errorCorrectionLevel: "M", color: colors }),
     ]);
   }
 
@@ -74,9 +81,9 @@ export default async function AppointmentPage({
         patientName={patient.data?.legal_name ?? ""}
         reference={appt.reference}
         service={appt.dental_services?.name ?? "Appointment"}
-        date={fmtDateTz(appt.starts_at, settings.timezone)}
-        start={fmtSlot(appt.starts_at, settings.timezone)}
-        end={fmtSlot(appt.ends_at, settings.timezone)}
+        date={dateLabel}
+        start={startLabel}
+        end={endLabel}
         dentist={appt.dentists?.display_name ?? null}
         status={appt.status}
         qrSvg={qrSvg}

@@ -68,3 +68,47 @@ details[open] .faq-plus { transform: rotate(45deg); }
   .ticket { background: #fff !important; color: #000 !important; border: 1px solid #000 !important; box-shadow: none !important; }
   .ticket *, .ticket dt { color: #000 !important; border-color: #999 !important; }
 }
+
+/* Falling feathers (site-wide background) */
+.feathers { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.feather { position: absolute; top: 0; left: var(--x); width: var(--s); opacity: .8; will-change: transform;
+  animation: feather-fall var(--d) linear var(--delay) infinite; }
+.feather > svg { display: block; width: 100%; height: auto; will-change: transform;
+  filter: drop-shadow(0 0 6px rgba(196,199,208,.10));
+  animation: feather-sway var(--sd) ease-in-out var(--delay) infinite; }
+@keyframes feather-fall { from { transform: translate3d(0, -18vh, 0); } to { transform: translate3d(0, 118vh, 0); } }
+@keyframes feather-sway {
+  0%, 100% { transform: translateX(calc(var(--sway) * -1)) rotate(calc(var(--rot) * -1)); }
+  50% { transform: translateX(var(--sway)) rotate(var(--rot)); }
+}
+@media (max-width: 640px) { .feather:nth-child(even) { display: none; } }
+@media (prefers-reduced-motion: reduce) { .feathers { display: none; } }
+@media print { .feathers { display: none !important; } }
+
+/* Admin dashboard (follows the CRM mockup: navy panels, gradient KPI cards, neon chart hues) */
+.adm { background: #0c0d1a; }
+.adm-card { @apply rounded-2xl border border-night-line bg-night-panel; box-shadow: 0 12px 32px -18px rgba(0,0,0,.8); }
+.grad-magenta { background: linear-gradient(135deg, #e0529c 0%, #8b5cf6 100%); }
+.grad-cyan { background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%); }
+.adm .field { background: #0e1022; border-color: #2a2f55; }
+.adm .field:focus { border-color: #22d3ee; }
+.adm-btn { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors; }
+.adm-btn-primary { @apply adm-btn text-white; background: linear-gradient(135deg, #8b5cf6, #3b82f6); }
+.adm-btn-primary:hover { filter: brightness(1.1); }
+.adm-btn-ghost { @apply adm-btn border border-night-line text-silver hover:border-silver/50 hover:text-snow; }
+.adm-btn-danger { @apply adm-btn border border-crimson/60 text-crimson-light hover:bg-crimson/15; }
+.adm-pill { @apply rounded-full border border-night-line px-2.5 py-0.5 text-xs text-silver; }
+.adm table { border-collapse: collapse; }
+
+/* Mobile polish */
+@media (pointer: coarse) {
+  .btn, .adm-btn { min-height: 44px; }
+  .field { min-height: 44px; }
+}
+@media (max-width: 1023px) {
+  body:has(.dash-shell) footer { padding-bottom: 5.5rem; }
+}
+@media (max-width: 480px) {
+  body { font-size: 1rem; }
+  .section { padding-top: 3.5rem; padding-bottom: 3.5rem; }
+}

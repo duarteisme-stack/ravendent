@@ -42,11 +42,11 @@ export default function Ticket({ patientName, reference, service, date, start, e
           </dl>
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-3 md:w-56">
+        <div className="flex flex-col items-center justify-center gap-3 md:w-64">
           {qrSvg ? (
             <>
-              <div className="w-48 rounded-md bg-white p-2" role="img" aria-label={`QR code for appointment ${reference}`} dangerouslySetInnerHTML={{ __html: qrSvg }} />
-              <p className="text-center text-xs text-muted">Show this at reception. It holds only a random reference, no personal or medical details.</p>
+              <div className="w-full max-w-[16rem] rounded-md bg-white p-2" role="img" aria-label={`QR code for appointment ${reference}`} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+              <p className="text-center text-xs text-muted">Any phone camera shows your appointment details from this code. Staff scan it at reception. It never holds medical information.</p>
             </>
           ) : (
             <p className="rounded-md border border-silver/15 bg-charcoal p-4 text-center text-sm text-muted">

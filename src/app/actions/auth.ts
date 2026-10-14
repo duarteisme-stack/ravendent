@@ -50,7 +50,7 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
   if (emailErr || !password) return { fields: { ...(emailErr ? { email: emailErr } : {}), ...(!password ? { password: "Enter your password." } : {}) }, values: { email } };
 
   const sb = await createSupabaseServer();
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  const { data: signIn, error } = await sb.auth.signInWithPassword({ email, password });
 
   if (error) {
     if (error.code === "email_not_confirmed") {
@@ -60,6 +60,12 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
       return { error: "Too many attempts. Please wait a few minutes and try again.", values: { email } };
     }
     return { error: GENERIC_LOGIN_ERROR, values: { email } };
+  }
+
+  // Staff land on the admin dashboard unless they were sent here from a specific page.
+  if (!str(fd, "next") || next === "/dashboard") {
+    const { data: p } = await sb.from("profiles").select("role").eq("id", signIn.user.id).maybeSingle();
+    if (p && p.role !== "customer") redirect("/admin");
   }
   redirect(next);
 }

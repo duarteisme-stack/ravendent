@@ -1,4 +1,5 @@
 import PatientProfileForm from "@/components/PatientProfileForm";
+import MeTabs from "@/components/MeTabs";
 import { getSessionContext } from "@/lib/dashboard";
 import { safeNext } from "@/lib/validation";
 
@@ -21,11 +22,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="max-w-2xl space-y-6">
-      <header>
-        <h1 className="text-5xl">Patient profile</h1>
-        <p className="mt-2 text-muted">
-          We ask only for what the clinic needs to treat you safely and reach you. You can review and update everything here.
-        </p>
+      <header className="space-y-5">
+        <h1 className="text-5xl sm:text-6xl">Personal details</h1>
+        <MeTabs current="/dashboard/profile" />
+        <p className="text-muted">We ask only for what the clinic needs to treat and reach you.</p>
       </header>
       <PatientProfileForm defaults={defaults} hasConsent={Boolean(data?.privacy_consent_at)} next={sp.next ? safeNext(sp.next) : undefined} />
     </div>

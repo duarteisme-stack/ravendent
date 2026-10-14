@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FallingFeathers from "@/components/FallingFeathers";
 import { getClinicData } from "@/lib/clinic";
 
 export const metadata: Metadata = {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   description: "RavenDent is a dental clinic offering comfortable, reliable care. View available appointments and book online.",
 };
 
-export const viewport: Viewport = { themeColor: "#0B0B0F", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#0B0B0F", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export const revalidate = 60;
 
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           Skip to main content
         </a>
+        <FallingFeathers />
         <Navbar />
         <main id="main">{children}</main>
         <Footer settings={settings} />

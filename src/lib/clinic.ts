@@ -42,6 +42,7 @@ export type Dentist = {
 
 export type ClinicData = {
   configured: boolean;
+  loadError: boolean;
   settings: ClinicSettings;
   hours: ClinicHour[];
   services: Service[];
@@ -63,7 +64,7 @@ const DEFAULT_SETTINGS: ClinicSettings = {
 /** Server-side fetch of everything the public homepage needs (all publicly readable via RLS). */
 export async function getClinicData(): Promise<ClinicData> {
   const sb = getSupabase();
-  const empty: ClinicData = { configured: false, settings: DEFAULT_SETTINGS, hours: [], services: [], dentists: [] };
+  const empty: ClinicData = { configured: false, loadError: false, settings: DEFAULT_SETTINGS, hours: [], services: [], dentists: [] };
   if (!sb) return empty;
 
   try {
@@ -73,8 +74,11 @@ export async function getClinicData(): Promise<ClinicData> {
       sb.from("dental_services").select("*").eq("is_active", true).order("sort_order"),
       sb.from("dentists").select("*").eq("is_active", true).order("display_name"),
     ]);
+    const failed = [settings, hours, services, dentists].find((r) => r.error);
+    if (failed?.error) console.error("getClinicData query failed:", failed.error.message);
     return {
       configured: true,
+      loadError: Boolean(failed?.error),
       settings: { ...DEFAULT_SETTINGS, ...(settings.data ?? {}) },
       hours: (hours.data ?? []) as ClinicHour[],
       services: (services.data ?? []) as Service[],
@@ -82,6 +86,6 @@ export async function getClinicData(): Promise<ClinicData> {
     };
   } catch (err) {
     console.error("getClinicData failed", err);
-    return empty;
+    return { ...empty, configured: true, loadError: true };
   }
 }

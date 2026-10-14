@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDateTz, fmtSlot } from "@/lib/format";
+import { datePartsTz, fmtSlot } from "@/lib/format";
 import type { AppointmentRow } from "@/lib/dashboard";
 
 const STATUS: Record<AppointmentRow["status"], { label: string; cls: string }> = {
@@ -12,27 +12,34 @@ const STATUS: Record<AppointmentRow["status"], { label: string; cls: string }> =
 
 export function StatusBadge({ status }: { status: AppointmentRow["status"] }) {
   const s = STATUS[status];
-  return <span className={`rounded-full border px-2.5 py-0.5 text-xs ${s.cls}`}>{s.label}</span>;
+  return <span className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs ${s.cls}`}>{s.label}</span>;
+}
+
+export function DateBlock({ iso, timezone, large = false }: { iso: string; timezone: string; large?: boolean }) {
+  const p = datePartsTz(iso, timezone);
+  return (
+    <div className={`flex shrink-0 flex-col items-center justify-center rounded-xl border border-silver/20 bg-ink/60 ${large ? "h-24 w-24" : "h-16 w-16"}`}>
+      <span className="text-xs text-muted">{p.weekday}</span>
+      <span className={`font-display leading-none ${large ? "text-5xl" : "text-3xl"}`}>{p.day}</span>
+      <span className="text-xs text-silver">{p.month}</span>
+    </div>
+  );
 }
 
 export default function AppointmentList({ items, timezone }: { items: AppointmentRow[]; timezone: string }) {
   return (
-    <ul className="divide-y divide-silver/15 border-y border-silver/15">
+    <ul className="space-y-3">
       {items.map((a) => (
-        <li key={a.id} className="grid gap-x-8 gap-y-1 py-5 sm:grid-cols-[1fr_auto]">
-          <div>
-            <h3 className="text-2xl">{a.dental_services?.name ?? "Appointment"}</h3>
-            <p className="text-silver">
-              {fmtDateTz(a.starts_at, timezone)}, {fmtSlot(a.starts_at, timezone)} to {fmtSlot(a.ends_at, timezone)}
-            </p>
-            <p className="text-sm text-muted">
-              {a.dentists?.display_name ? `${a.dentists.display_name}. ` : ""}Reference {a.reference}
-            </p>
-          </div>
-          <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:justify-between">
+        <li key={a.id}>
+          <Link href={`/dashboard/appointments/${a.id}`} className="panel flex items-center gap-4 p-4 transition-colors hover:border-silver/40">
+            <DateBlock iso={a.starts_at} timezone={timezone} />
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-xl leading-tight">{a.dental_services?.name ?? "Appointment"}</h3>
+              <p className="text-sm text-silver">{fmtSlot(a.starts_at, timezone)} to {fmtSlot(a.ends_at, timezone)}</p>
+              {a.dentists?.display_name && <p className="truncate text-sm text-muted">{a.dentists.display_name}</p>}
+            </div>
             <StatusBadge status={a.status} />
-            <Link href={`/dashboard/appointments/${a.id}`} className="text-sm text-crimson-light underline underline-offset-4 hover:text-snow">View ticket</Link>
-          </div>
+          </Link>
         </li>
       ))}
     </ul>

@@ -16,14 +16,21 @@ const LINKS = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
   const close = () => setOpen(false);
 
   // Static pages stay cached; the navbar learns about the session in the browser.
   useEffect(() => {
     const sb = getSupabaseBrowser();
     if (!sb) return;
-    void sb.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => setSignedIn(Boolean(session)));
+    const apply = async (uid: string | null) => {
+      setSignedIn(Boolean(uid));
+      if (!uid) return setIsStaff(false);
+      const { data } = await sb.from("profiles").select("role").eq("id", uid).maybeSingle();
+      setIsStaff(Boolean(data && data.role !== "customer"));
+    };
+    void sb.auth.getSession().then(({ data }) => apply(data.session?.user.id ?? null));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { void apply(session?.user.id ?? null); });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -47,7 +54,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           {signedIn ? (
-            <Link href="/dashboard" className="btn-primary !py-2 !px-4 !text-[0.95rem]">My Dashboard</Link>
+            <Link href={isStaff ? "/admin" : "/dashboard"} className="btn-primary !py-2 !px-4 !text-[0.95rem]">{isStaff ? "Admin Dashboard" : "My Dashboard"}</Link>
           ) : (
             <>
               <Link href="/login" className="btn-ghost !py-2 !px-4 !text-[0.95rem]">Log In</Link>
@@ -82,7 +89,7 @@ export default function Navbar() {
             ))}
             <li className="flex gap-3 py-4">
               {signedIn ? (
-                <Link href="/dashboard" onClick={close} className="btn-primary flex-1">My Dashboard</Link>
+                <Link href={isStaff ? "/admin" : "/dashboard"} onClick={close} className="btn-primary flex-1">{isStaff ? "Admin Dashboard" : "My Dashboard"}</Link>
               ) : (
                 <>
                   <Link href="/login" onClick={close} className="btn-ghost flex-1">Log In</Link>

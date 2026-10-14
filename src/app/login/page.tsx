@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     : undefined;
   return (
     <AuthShell title="Log in" intro="Welcome back to RavenDent.">
-      <LoginForm next={safeNext(sp.next)} notice={notice} />
+      <LoginForm next={sp.next ? safeNext(sp.next) : ""} notice={notice} />
     </AuthShell>
   );
 }
