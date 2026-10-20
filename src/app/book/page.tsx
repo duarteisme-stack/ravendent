@@ -9,7 +9,10 @@ type SP = { service?: string; start?: string; dentist?: string };
 
 export default async function BookPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const { sb, user } = await getSessionContext();
+  const { sb, user, profile } = await getSessionContext();
+  if (profile?.role && profile.role !== "customer") {
+    redirect(`/admin/appointments?err=${encodeURIComponent("Staff accounts do not book appointments. Manage or reschedule patient appointments here.")}`);
+  }
 
   const qs = new URLSearchParams();
   if (sp.service) qs.set("service", sp.service);

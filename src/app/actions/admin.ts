@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { audit, requireStaff } from "@/lib/admin";
 import { localToUtcISO } from "@/lib/format";
 import { parseScanned } from "@/lib/qr";
-import { createSupabaseServer } from "@/lib/supabase-server";
+import { createSupabaseServer, getPhotoUrl } from "@/lib/supabase-server";
 import { safeNext, str } from "@/lib/validation";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,7 +57,7 @@ export async function saveServiceAction(fd: FormData) {
   if (!Number.isInteger(row.sort_order)) fail(back, "Order must be a whole number.");
 
   const { error } = id ? await sb.from("dental_services").update(row).eq("id", id) : await sb.from("dental_services").insert(row);
-  if (error) fail(back, dbMessage(error, "A service with that name"));
+  if (error) fail(back, error.code === "23505" ? "A service with that name already exists (capital letters do not make it different)." : dbMessage(error, "This service"));
   await audit(sb, user.id, id ? "service_updated" : "service_created", "dental_services", id || null, { name: row.name, duration });
   revalidatePath("/"); revalidatePath("/book"); revalidatePath(back);
   done(back, id ? "Service updated." : "Service added.");
@@ -103,7 +103,10 @@ export async function saveDentistAction(fd: FormData) {
   const { data, error } = id
     ? await sb.from("dentists").update(row).eq("id", id).select("id")
     : await sb.from("dentists").insert(row).select("id");
-  if (error) fail(back, error.code === "23505" ? "That login account is already linked to another doctor." : dbMessage(error, "This doctor"));
+  if (error) {
+    if (error.code === "23505") fail(back, /name_ci|display_name/.test(error.message ?? "") ? "A doctor with that name already exists. Add a title or middle initial to tell them apart." : "That login account is already linked to another doctor.");
+    fail(back, dbMessage(error, "This doctor"));
+  }
   await audit(sb, user.id, id ? "doctor_updated" : "doctor_created", "dentists", data?.[0]?.id ?? id, { name: row.display_name });
   revalidatePath("/"); revalidatePath(back);
   if (!id && data?.[0]?.id) redirect(`/admin/doctors/${data[0].id}?ok=${encodeURIComponent("Doctor added. Now set their weekly working times.")}`);
@@ -137,7 +140,7 @@ export async function addAvailabilityAction(fd: FormData) {
   if (clash) fail(back, "That overlaps a working window already set for one of those days. Remove or change the old one first.");
 
   const { error } = await sb.from("dentist_availability").insert(days.map((weekday) => ({ dentist_id: dentistId, weekday, start_time: start, end_time: end })));
-  if (error) fail(back, dbMessage(error, "This time"));
+  if (error) fail(back, error.code === "23505" ? "Those working times are already set." : dbMessage(error, "This time"));
   await audit(sb, user.id, "availability_added", "dentist_availability", dentistId, { days, start, end });
   revalidatePath("/"); revalidatePath(back);
   done(back, "Working time added.");
@@ -231,7 +234,7 @@ export async function addBlockAction(fd: FormData) {
   const { error } = await sb.from("blocked_slots").insert({
     dentist_id: dentistId || null, starts_at: starts, ends_at: ends, kind, reason: str(fd, "reason").slice(0, 200) || null, created_by: user.id,
   });
-  if (error) fail(back, dbMessage(error, "This block"));
+  if (error) fail(back, error.code === "23505" ? "That exact closure is already on the list." : dbMessage(error, "This block"));
 
   // Warn about bookings that already sit inside the new block.
   let q = sb.from("appointments").select("id", { count: "exact", head: true }).in("status", ["pending", "confirmed"]).lt("starts_at", ends).gt("ends_at", starts);
@@ -315,7 +318,7 @@ export async function staffStatusAction(fd: FormData) {
 /* ------------------------------ QR scanning ------------------------------ */
 
 export type ScanResult =
-  | { state: "ok"; id: string; reference: string; patient: string; service: string; dentist: string; starts_at: string; ends_at: string; status: string; valid: boolean }
+  | { state: "ok"; id: string; reference: string; patient: string; service: string; dentist: string; starts_at: string; ends_at: string; status: string; valid: boolean; photo: string | null }
   | { state: "notfound" | "unreadable" | "error" };
 
 export async function verifyCodeAction(raw: string): Promise<ScanResult> {
@@ -327,10 +330,13 @@ export async function verifyCodeAction(raw: string): Promise<ScanResult> {
   if (error) { console.error("verify failed", error.message); return { state: "error" }; }
   const row = (data as Record<string, unknown>[] | null)?.[0];
   if (!row) return { state: "notfound" };
+  // Show the patient's photo (if they added one) so reception can compare it with the person in front of them.
+  const { data: owner } = await sb.from("appointments").select("patient_id").eq("id", row.out_id as string).maybeSingle();
+  const photo = owner?.patient_id ? await getPhotoUrl(sb, owner.patient_id) : null;
   return {
     state: "ok", id: row.out_id as string, reference: row.out_reference as string, patient: row.out_patient as string,
     service: row.out_service as string, dentist: row.out_dentist as string, starts_at: row.out_starts_at as string,
-    ends_at: row.out_ends_at as string, status: row.out_status as string, valid: row.out_valid as boolean,
+    ends_at: row.out_ends_at as string, status: row.out_status as string, valid: row.out_valid as boolean, photo,
   };
 }
 

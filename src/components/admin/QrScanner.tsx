@@ -154,6 +154,13 @@ export default function QrScanner({ timezone, canComplete }: { timezone: string;
                   : `This appointment is ${ok.status.replace("_", " ")}.`}
               </p>
             )}
+            {ok.photo && (
+              <div className="mt-5 flex items-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ok.photo} alt={`Photo of ${ok.patient}`} className="h-24 w-24 shrink-0 rounded-full border border-night-line object-cover" />
+                <p className="text-sm text-silver">Compare with the person at reception.</p>
+              </div>
+            )}
             <dl className="mt-5 divide-y divide-night-line border-y border-night-line">
               {([["Patient", ok.patient], ["Service", ok.service], ["Dentist", ok.dentist], ["Date", fmtDateTz(ok.starts_at, timezone)], ["Time", `${fmtSlot(ok.starts_at, timezone)} to ${fmtSlot(ok.ends_at, timezone)}`], ["Reference", ok.reference]] as const).map(([k, v]) => (
                 <div key={k} className="grid gap-1 py-2.5 sm:grid-cols-[7rem_1fr]"><dt className="text-sm text-muted">{k}</dt><dd>{v}</dd></div>

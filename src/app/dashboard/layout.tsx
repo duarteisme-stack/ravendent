@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import DashboardNav from "@/components/DashboardNav";
 import { logoutAction } from "@/app/actions/auth";
 import { getSessionContext } from "@/lib/dashboard";
@@ -5,7 +6,9 @@ import { getSessionContext } from "@/lib/dashboard";
 export const metadata = { title: "Dashboard", robots: { index: false } };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { sb, user } = await getSessionContext();
+  const { sb, user, profile } = await getSessionContext();
+  // Admins, receptionists, and dentists run the clinic from the admin dashboard; the patient area is for patients.
+  if (profile?.role && profile.role !== "customer") redirect("/admin");
   const { count } = await sb.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("read_at", null);
 
   return (

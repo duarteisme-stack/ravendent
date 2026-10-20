@@ -5,6 +5,7 @@ import { Card, Empty, PageHead } from "@/components/admin/UI";
 import { requireStaff } from "@/lib/admin";
 import { getClinicData } from "@/lib/clinic";
 import { fmtDateTz, fmtSlot } from "@/lib/format";
+import { getPhotoUrl } from "@/lib/supabase-server";
 
 export const metadata = { title: "Patient" };
 
@@ -31,11 +32,18 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
   ]);
   if (!prof) notFound();
   const list = (appts ?? []) as unknown as Appt[];
+  const photo = await getPhotoUrl(sb, id);
 
   return (
     <>
       <Link href="/admin/patients" className="text-sm text-silver hover:text-snow">Back to patients</Link>
-      <div className="mt-2"><PageHead title={pat?.legal_name || prof.full_name || "Patient"} sub={`Registered ${fmtDateTz(prof.created_at, settings.timezone)}`} /></div>
+      <div className="mt-2 flex items-center gap-5">
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="Patient photo" className="mb-6 h-20 w-20 shrink-0 rounded-full border border-night-line object-cover" />
+        )}
+        <div className="min-w-0 flex-1"><PageHead title={pat?.legal_name || prof.full_name || "Patient"} sub={`Registered ${fmtDateTz(prof.created_at, settings.timezone)}`} /></div>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>

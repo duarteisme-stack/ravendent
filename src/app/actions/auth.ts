@@ -1,17 +1,25 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createSupabaseServer, siteUrl } from "@/lib/supabase-server";
+import { createSupabaseServer, siteUrl, supabaseConfigured } from "@/lib/supabase-server";
 import {
   safeNext, str, validateEmail, validatePassword, validateRegister,
 } from "@/lib/validation";
 import type { FormState } from "./types";
 
 const GENERIC_LOGIN_ERROR = "Incorrect email or password.";
+const NOT_CONFIGURED = "This site is not connected to its database yet. The site owner needs to finish the Supabase setup.";
+const EMAIL_LIMIT = "Too many emails were sent recently, so we cannot send another right now. Please try again in about an hour, or contact the clinic.";
+const isEmailLimit = (e: { code?: string; status?: number } | null) => Boolean(e && (e.code === "over_email_send_rate_limit" || e.status === 429));
+const configError = (values?: Record<string, string>): FormState => {
+  console.error("Auth action called but Supabase environment variables are missing.");
+  return { error: NOT_CONFIGURED, values };
+};
 
 export async function registerAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const { values, password, errors } = validateRegister(fd);
   if (Object.keys(errors).length) return { fields: errors, values };
+  if (!supabaseConfigured()) return configError(values);
 
   const sb = await createSupabaseServer();
   const { data, error } = await sb.auth.signUp({
@@ -24,8 +32,9 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   });
 
   if (error) {
-    if (error.code === "over_email_send_rate_limit" || error.status === 429) {
-      return { error: "Too many attempts. Please wait a few minutes and try again.", values };
+    if (isEmailLimit(error)) {
+      console.error("Supabase email rate limit hit on sign-up. Owner: enable custom SMTP (Brevo) in Supabase > Authentication > Emails and raise the email rate limit.");
+      return { error: EMAIL_LIMIT, values };
     }
     if (error.code === "weak_password") return { fields: { password: "Choose a stronger password." }, values };
     console.error("signUp failed", error.code);
@@ -49,6 +58,7 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
   const emailErr = validateEmail(email);
   if (emailErr || !password) return { fields: { ...(emailErr ? { email: emailErr } : {}), ...(!password ? { password: "Enter your password." } : {}) }, values: { email } };
 
+  if (!supabaseConfigured()) return configError({ email });
   const sb = await createSupabaseServer();
   const { data: signIn, error } = await sb.auth.signInWithPassword({ email, password });
 
@@ -74,11 +84,12 @@ export async function resendConfirmationAction(_prev: FormState, fd: FormData): 
   const email = str(fd, "email").toLowerCase();
   if (validateEmail(email)) return { error: "Enter a valid email address." };
   const sb = await createSupabaseServer();
-  await sb.auth.resend({
+  const { error } = await sb.auth.resend({
     type: "signup",
     email,
     options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=/dashboard/profile` },
   });
+  if (isEmailLimit(error)) return { error: EMAIL_LIMIT };
   return { message: "If that account is waiting for confirmation, a new link is on its way." };
 }
 
@@ -86,9 +97,11 @@ export async function forgotPasswordAction(_prev: FormState, fd: FormData): Prom
   const email = str(fd, "email").toLowerCase();
   const err = validateEmail(email);
   if (err) return { fields: { email: err }, values: { email } };
+  if (!supabaseConfigured()) return configError({ email });
 
   const sb = await createSupabaseServer();
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: `${await siteUrl()}/auth/callback?next=/reset-password` });
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${await siteUrl()}/auth/callback?next=/reset-password` });
+  if (isEmailLimit(error)) return { error: EMAIL_LIMIT, values: { email } };
   return { message: "If an account exists for that email, a reset link is on its way. It expires after a short time." };
 }
 

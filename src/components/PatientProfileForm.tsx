@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { savePatientProfileAction } from "@/app/actions/profile";
 import type { FormState } from "@/app/actions/types";
 import { CheckField, Field, FormNotice, SubmitButton } from "./FormBits";
+import TxtFill from "./TxtFill";
 
 export type PatientDefaults = Record<string, string>;
 
@@ -15,6 +16,7 @@ export default function PatientProfileForm({ defaults, hasConsent, next }: { def
     <form action={action} className="space-y-6" noValidate>
       {next && <input type="hidden" name="next" value={next} />}
       <FormNotice state={state} />
+      <TxtFill map={{ full_name: "legal_name", date_of_birth: "date_of_birth", phone: "phone", address: "address", emergency_contact_name: "emergency_contact_name", emergency_contact_phone: "emergency_contact_phone", reason_for_consultation: "reason_for_consultation" }} />
 
       <fieldset className="space-y-5">
         <legend className="font-display text-2xl">Required</legend>

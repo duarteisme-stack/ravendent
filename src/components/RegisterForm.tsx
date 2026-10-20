@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { registerAction } from "@/app/actions/auth";
 import type { FormState } from "@/app/actions/types";
 import { CheckField, Field, FormNotice, SubmitButton } from "./FormBits";
+import TxtFill from "./TxtFill";
 
 export default function RegisterForm() {
   const [state, action] = useActionState<FormState, FormData>(registerAction, {});
@@ -22,6 +23,7 @@ export default function RegisterForm() {
   return (
     <form action={action} className="space-y-5" noValidate>
       <FormNotice state={state} />
+      <TxtFill title="Fill in your name and contact from a text file" map={{ full_name: "full_name", email: "email", phone: "phone" }} />
       <Field name="full_name" label="Full name" state={state} autoComplete="name" />
       <Field name="email" label="Email address" type="email" state={state} autoComplete="email" inputMode="email" />
       <Field name="phone" label="Mobile phone number" type="tel" state={state} autoComplete="tel" inputMode="tel" hint="Used for appointment contact only." />

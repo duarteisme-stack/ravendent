@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { saveMedicalAction } from "@/app/actions/profile";
 import type { FormState } from "@/app/actions/types";
 import { CheckField, Field, FormNotice, SubmitButton } from "./FormBits";
+import TxtFill from "./TxtFill";
 
 export default function MedicalForm({ defaults, hasConsent, next }: { defaults: Record<string, string>; hasConsent: boolean; next?: string }) {
   const [state, action] = useActionState<FormState, FormData>(saveMedicalAction, {});
@@ -12,6 +13,7 @@ export default function MedicalForm({ defaults, hasConsent, next }: { defaults: 
     <form action={action} className="space-y-6" noValidate>
       {next && <input type="hidden" name="next" value={next} />}
       <FormNotice state={state} />
+      <TxtFill map={{ allergies: "allergies", conditions: "conditions", medications: "medications", previous_dental_concerns: "previous_dental_concerns" }} />
       <p className="text-sm text-muted">
         Write &quot;None&quot; if a section does not apply. Leaving a section empty is also fine, but the dentist will ask you in person.
       </p>

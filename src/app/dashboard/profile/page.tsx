@@ -1,5 +1,7 @@
 import PatientProfileForm from "@/components/PatientProfileForm";
 import MeTabs from "@/components/MeTabs";
+import PhotoUpload from "@/components/PhotoUpload";
+import { getPhotoUrl } from "@/lib/supabase-server";
 import { getSessionContext } from "@/lib/dashboard";
 import { safeNext } from "@/lib/validation";
 
@@ -8,6 +10,7 @@ export const metadata = { title: "Patient Profile" };
 export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { sb, user, profile } = await getSessionContext();
   const sp = await searchParams;
+  const photoUrl = await getPhotoUrl(sb, user.id);
   const { data } = await sb.from("patient_profiles").select("*").eq("user_id", user.id).maybeSingle();
 
   const defaults: Record<string, string> = {
@@ -27,6 +30,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <MeTabs current="/dashboard/profile" />
         <p className="text-muted">We ask only for what the clinic needs to treat and reach you.</p>
       </header>
+      <PhotoUpload userId={user.id} initialUrl={photoUrl} />
       <PatientProfileForm defaults={defaults} hasConsent={Boolean(data?.privacy_consent_at)} next={sp.next ? safeNext(sp.next) : undefined} />
     </div>
   );

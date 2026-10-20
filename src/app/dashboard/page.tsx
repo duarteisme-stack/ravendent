@@ -3,6 +3,7 @@ import { DateBlock, StatusBadge } from "@/components/AppointmentList";
 import { getClinicData } from "@/lib/clinic";
 import { APPT_SELECT, getSessionContext, type AppointmentRow } from "@/lib/dashboard";
 import { fmtSlot, greetingTz } from "@/lib/format";
+import { getPhotoUrl } from "@/lib/supabase-server";
 
 export default async function DashboardHome() {
   const { sb, user, profile } = await getSessionContext();
@@ -15,6 +16,7 @@ export default async function DashboardHome() {
       .gte("ends_at", new Date().toISOString()).order("starts_at").limit(1),
   ]);
 
+  const photo = await getPhotoUrl(sb, user.id);
   const hasPatient = Boolean(patient.data);
   const hasMedical = Boolean(medical.data);
   const done = Number(hasPatient) + Number(hasMedical);
@@ -26,9 +28,15 @@ export default async function DashboardHome() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-muted">{greetingTz(settings.timezone)}</p>
-        <h1 className="text-5xl sm:text-6xl">{firstName || "Welcome"}</h1>
+      <header className="flex items-center gap-4">
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className="h-16 w-16 shrink-0 rounded-full border border-silver/30 object-cover" />
+        )}
+        <div className="min-w-0">
+          <p className="text-muted">{greetingTz(settings.timezone)}</p>
+          <h1 className="truncate text-5xl sm:text-6xl">{firstName || "Welcome"}</h1>
+        </div>
       </header>
 
       {!ready && (
