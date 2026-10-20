@@ -19,13 +19,16 @@ Next.js 15 (App Router) + TypeScript + Tailwind, Supabase Postgres, deployed on 
 | Camera QR scanner for staff (`/admin/scan`) with manual reference fallback | Done |
 | Patient dashboard redesigned for phones (bottom tab bar, single next-visit card) | Done |
 | Falling black feathers background | Done (hidden for reduced-motion users) |
+| Fill the registration, patient, and medical forms from a .txt file (read in the browser, never uploaded) | Done |
+| Patient photo: upload or take a selfie; shown to staff on the patient page and when a ticket is scanned | Done (needs `004`) |
+| Duplicate protection (services, doctors, closures, working times, double booking, emails) | Done (needs `004`) |
 | Booking limits and rate limiting (database level) | Done |
 
 | Brevo emails, reminders, tests | Stage 6 |
 
 ## Setup
 
-1. Supabase: create a project, open SQL Editor, run `supabase/migrations/001_init.sql`, then `002_booking.sql`, then `003_admin.sql`. (Already ran earlier ones? Run only the files you have not run yet, in order.)
+1. Supabase: create a project, open SQL Editor, run `supabase/migrations/001_init.sql`, then `002_booking.sql`, then `003_admin.sql`, then `004_photos_and_duplicates.sql`. (Already ran earlier ones? Run only the files you have not run yet, in order.)
 2. Copy `.env.example` to `.env.local` and fill in the Project URL, anon key (Project Settings > API), and site URL.
 3. `npm install` then `npm run dev` and open http://localhost:3000.
 4. Supabase > Authentication:
@@ -33,7 +36,7 @@ Next.js 15 (App Router) + TypeScript + Tailwind, Supabase Postgres, deployed on 
    - Emails > SMTP Settings: enable custom SMTP with Brevo (host `smtp-relay.brevo.com`, port 587, your Brevo SMTP login and key, a verified sender address).
    - Emails > Templates: paste `supabase/email-templates/confirm-signup.html` and `reset-password.html` (they use token links that work on any device).
    - Sign In / Providers > Email: keep "Confirm email" on.
-5. Optional: drop a dental clinic photo at `public/hero.jpg`. The hero darkens it automatically; without it you get the crimson gradient.
+5. Optional: replace `public/hero.svg` with a dental clinic photo (keep the name `hero.svg`, or change the file name in `.hero-bg` in `globals.css`). The hero darkens it automatically.
 6. Vercel: import the repo, add the same three env vars, deploy.
 
 Edit clinic address, phone, email, hours, services, and dentists in the Supabase Table Editor for now (`clinic_settings`, `clinic_hours`, `dental_services`, `dentists`). The admin dashboard replaces this in Stage 5.
@@ -83,12 +86,33 @@ Edit clinic address, phone, email, hours, services, and dentists in the Supabase
 | Staff and roles | Admin | Give or remove access, change roles, deactivate accounts |
 | Reports, Audit log | Reports: all staff; Audit: admin | Counts by status, service, doctor for any range; who changed what |
 
+Staff accounts do not use the patient booking pages: admins, receptionists, and dentists who open the patient dashboard or the booking page are sent to the admin dashboard.
+
 To become admin: register on the website, then run once in the SQL Editor:
 `update profiles set role = 'admin' where email = 'YOUR-EMAIL';`
 Staff sign in at the normal login page and land on the admin dashboard.
 
 The scanner needs HTTPS for the camera (Vercel provides it) and the browser's camera permission.
 Deleting a service or doctor that has appointments is refused; hide it instead (untick "shown on the website").
+
+## Duplicates and edits
+
+| Item | Add | Edit | Delete | Duplicate protection |
+|---|---|---|---|---|
+| Services | Yes | Yes | Yes (refused if it has appointments; hide it instead) | Same name refused, capitals ignored |
+| Doctors | Yes | Yes | Yes (refused if they have appointments; hide instead) | Same name refused, capitals ignored; a login account can link to one doctor only |
+| Doctor working times | Yes | Remove and re-add | Yes | Overlapping or identical windows refused |
+| Holidays and leave | Yes | Remove and re-add | Yes | Identical closure refused; warns about appointments inside it |
+| Opening hours, clinic settings | n/a | Yes | n/a | n/a |
+| Appointments | By patients | Reschedule | Cancel (kept in history) | Double booking impossible; patient limit on upcoming visits |
+| Staff roles | Give access by email | Yes | Remove access | One account per email; you cannot change your own role |
+| Patients | Register themselves | They edit their own details | Contact the clinic (records are kept for care and legal reasons) | One account per email; two accounts for the same person are not detected |
+
+## Text-file fill and photos
+
+Patients can fill the registration, patient profile, and medical forms from a text file. Each line looks like `Full name: Ana Reyes`; a blank template can be downloaded from the form. The file is read in the browser, fills the boxes, and nothing is saved until the patient reviews and submits. Consent boxes are never ticked automatically. Dates such as `03/04/1990` are read month first; the form shows the result for checking.
+
+The photo (upload or selfie) is cropped to a small square JPEG in the browser and stored in a private Supabase bucket (`patient-photos`, one folder per patient). Only that patient and clinic staff can view it. The camera needs HTTPS and the browser's permission.
 
 ## Test accounts
 
@@ -138,6 +162,14 @@ Create users in Supabase > Authentication > Users (tick Auto Confirm), then run 
 | 38 | Scan from `/admin/scan` | Valid for a current ticket; Not valid for one replaced by a reschedule |
 | 39 | Log in as a receptionist, open a patient | Contact details shown, medical information hidden |
 | 40 | Open `/admin` as a customer | Redirected to the patient dashboard |
+| 42 | Register page: choose a .txt file with name, email, and phone lines | Boxes fill in; nothing is submitted until you press Create account |
+| 43 | Patient profile and medical pages: choose a .txt file | Matching boxes fill, a message lists what was filled; consent boxes stay unticked |
+| 44 | Patient profile: Take a selfie, then Use this photo | Photo appears; reload and it is still there |
+| 45 | Patient profile: Upload a photo, then Remove | Photo changes, then disappears |
+| 46 | Admin: open that patient | Photo shown beside the name |
+| 47 | Admin scan of that patient's ticket | Photo shown in the result for comparison |
+| 48 | Admin: add a service named the same as an existing one in different capitals | Refused with a clear message |
+| 49 | Admin: add the same closure twice | Second one refused |
 | 41 | Phone width: homepage, calendar, booking, dashboard, admin | No sideways scrolling; bottom tab bar on the patient dashboard; admin menu opens as a drawer |
 
 ## Troubleshooting
@@ -150,7 +182,7 @@ Create users in Supabase > Authentication > Users (tick Auto Confirm), then run 
 | Every day shows Closed | No `dentist_availability` rows, or `min_notice_hours` is larger than the time left today |
 | Confirmation or reset link says invalid or expired | Site URL / Redirect URLs not set, templates not pasted, or the link was already used |
 | No confirmation email | Check Brevo SMTP credentials and that the sender is verified; check Supabase Auth logs |
-| "Email rate limit exceeded" | Supabase limits auth emails per hour; custom SMTP (Brevo) raises it |
+| "Email rate limit exceeded" or "Too many emails were sent recently" when signing up | Supabase's built-in email sender allows only a few emails per hour for the whole project. Fix: Supabase > Authentication > Emails > SMTP Settings > turn on custom SMTP with your Brevo SMTP login and key (not the API key), then Authentication > Rate Limits and raise "emails sent per hour". Every sign-up, resend, and password reset counts. For quick testing only, turn off "Confirm email" under Sign In / Providers > Email, or create test users in Authentication > Users with Auto Confirm |
 | Fonts look plain | Google Fonts blocked by the network; the site falls back to Georgia and system sans |
 
 ## Structure
